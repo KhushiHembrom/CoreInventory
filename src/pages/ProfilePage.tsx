@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,20 +10,15 @@ import { toast } from "sonner";
 import { 
   User, 
   Mail, 
-  Phone, 
-  Shield, 
-  Lock, 
   LogOut, 
-  Eye, 
-  EyeOff, 
   Trash2, 
   CheckCircle2, 
-  AlertTriangle,
   Loader2,
-  KeyRound,
-  Fingerprint
+  Shield,
+  Briefcase,
+  Phone
 } from "lucide-react";
-import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function ProfilePage() {
@@ -31,47 +26,9 @@ export default function ProfilePage() {
   const [fullName, setFullName] = useState(profile?.full_name || "");
   const [phoneNumber, setPhoneNumber] = useState(profile?.phone_number || "");
   const [updatingProfile, setUpdatingProfile] = useState(false);
-  const [changingPassword, setChangingPassword] = useState(false);
   const queryClient = useQueryClient();
 
-  // Password / OTP State
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpVerified, setOtpVerified] = useState(false);
-  const [otpCode, setOtpCode] = useState(["", "", "", "", "", ""]);
-  const [timer, setTimer] = useState(0);
-  const [verifyingOtp, setVerifyingOtp] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showCurrent, setShowCurrent] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-
-  const otpRefs = [
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-  ];
-
   const isGoogleUser = user?.app_metadata?.provider === 'google';
-
-  const maskPhone = (phone: string) => {
-    if (!phone) return "";
-    const cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length < 10) return phone;
-    return `+${cleaned.substring(0, cleaned.length - 10)} ${cleaned.substring(cleaned.length - 10, cleaned.length - 7)} ******* ${cleaned.substring(cleaned.length - 3)}`;
-  };
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (timer > 0) {
-      interval = setInterval(() => setTimer(t => t - 1), 1000);
-    }
-    return () => clearInterval(interval);
-  }, [timer]);
 
   const handleUpdateProfile = async () => {
     setUpdatingProfile(true);
@@ -93,90 +50,6 @@ export default function ProfilePage() {
       toast.error(error.message);
     } finally {
       setUpdatingProfile(false);
-    }
-  };
-
-  const handleSendOTP = async () => {
-    if (!phoneNumber) {
-      toast.error("Please add a phone number to your profile first");
-      return;
-    }
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: phoneNumber
-      });
-      if (error) throw error;
-      setOtpSent(true);
-      setTimer(60);
-      toast.success('OTP sent to ' + maskPhone(phoneNumber));
-    } catch (error: any) {
-      toast.error("Failed to send OTP: " + error.message);
-    }
-  };
-
-  const handleVerifyOTP = async () => {
-    setVerifyingOtp(true);
-    try {
-      const token = otpCode.join("");
-      const { error } = await supabase.auth.verifyOtp({
-        phone: phoneNumber,
-        token: token,
-        type: 'sms'
-      });
-      if (error) throw error;
-      setOtpVerified(true);
-      toast.success("Identity verified! You can now set a new password.");
-    } catch (error: any) {
-      toast.error("Invalid or expired OTP: " + error.message);
-    } finally {
-      setVerifyingOtp(false);
-    }
-  };
-
-  const handleChangePassword = async () => {
-    if (newPassword !== confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
-    if (newPassword.length < 8) {
-      toast.error("Password must be at least 8 characters");
-      return;
-    }
-
-    setChangingPassword(true);
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-      if (error) throw error;
-      toast.success("Password changed successfully!");
-      // Reset state
-      setOtpSent(false);
-      setOtpVerified(false);
-      setOtpCode(["", "", "", "", "", ""]);
-      setNewPassword("");
-      setConfirmPassword("");
-    } catch (error: any) {
-      toast.error(error.message);
-    } finally {
-      setChangingPassword(false);
-    }
-  };
-
-  const handleOtpInput = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return;
-    const newCode = [...otpCode];
-    newCode[index] = value.slice(-1);
-    setOtpCode(newCode);
-
-    if (value && index < 5) {
-      otpRefs[index + 1].current?.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === "Backspace" && !otpCode[index] && index > 0) {
-      otpRefs[index - 1].current?.focus();
     }
   };
 
@@ -244,7 +117,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2 text-slate-500">
-                    <Mail size={14} /> Email Address <Lock size={12} />
+                    <Mail size={14} /> Email Address
                   </Label>
                   <Input 
                     value={user?.email || ""} 
@@ -265,7 +138,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2 text-slate-500">
-                    <Shield size={14} /> Organization Role
+                    <Briefcase size={14} /> Organization Role
                   </Label>
                   <Input 
                     value={profile?.role === 'manager' ? "Warehouse Manager" : "Warehouse Staff"} 
@@ -284,156 +157,6 @@ export default function ProfilePage() {
                   Save Changes
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Change Password Flow */}
-          <Card className="border-none shadow-sm overflow-hidden">
-            <CardHeader className="bg-slate-50 border-b border-slate-100">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <KeyRound className="h-5 w-5 text-indigo-600" />
-                Security & Password
-              </CardTitle>
-              <CardDescription>
-                {isGoogleUser && !otpVerified ? "You are using Google Auth. Set a password for email login too." : "Secure your account with a strong password"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-8">
-              {!otpSent && (
-                <div className="flex flex-col items-center justify-center py-6 text-center">
-                  <div className="h-16 w-16 rounded-full bg-indigo-50 flex items-center justify-center mb-4">
-                    <Fingerprint className="h-8 w-8 text-indigo-600" />
-                  </div>
-                  <h3 className="text-lg font-bold">Identity Verification Required</h3>
-                  <p className="text-slate-500 text-sm max-w-xs mt-2 mb-6">
-                    To change your password, we'll send a one-time verification code to {maskPhone(phoneNumber) || "your phone"}.
-                  </p>
-                  <Button 
-                    onClick={handleSendOTP} 
-                    disabled={!phoneNumber}
-                    className="h-12 border-indigo-200 hover:bg-indigo-50 text-indigo-700 bg-white border-2 px-8 rounded-xl font-bold"
-                  >
-                    Send OTP to my Phone
-                  </Button>
-                  {!phoneNumber && (
-                    <p className="text-rose-500 text-xs mt-3 flex items-center gap-1">
-                      <AlertTriangle size={12} /> Add phone number above first
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {otpSent && !otpVerified && (
-                <div className="space-y-8 py-4">
-                  <div className="text-center">
-                    <h3 className="text-lg font-bold">Enter Verification Code</h3>
-                    <p className="text-slate-500 text-sm mt-1">
-                      Sent to {maskPhone(phoneNumber)}
-                    </p>
-                  </div>
-
-                  <div className="flex gap-3 justify-center">
-                    {otpCode.map((digit, i) => (
-                      <input
-                        key={i}
-                        ref={otpRefs[i]}
-                        type="text"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(e) => handleOtpInput(i, e.target.value)}
-                        onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                        className="w-12 h-14 text-center text-2xl font-bold border-2 rounded-xl border-slate-200 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all outline-none"
-                      />
-                    ))}
-                  </div>
-
-                  <div className="flex flex-col items-center gap-4">
-                    <Button 
-                      onClick={handleVerifyOTP} 
-                      disabled={verifyingOtp || otpCode.join("").length < 6}
-                      className="w-full max-w-xs h-12 bg-indigo-600 hover:bg-indigo-700 rounded-xl font-bold transition-all"
-                    >
-                      {verifyingOtp ? <Loader2 className="animate-spin mr-2" /> : null}
-                      Verify Identity
-                    </Button>
-                    <button 
-                      onClick={handleSendOTP} 
-                      disabled={timer > 0}
-                      className={`text-sm font-semibold transition-colors ${timer > 0 ? 'text-slate-400 cursor-not-allowed' : 'text-indigo-600 hover:text-indigo-800'}`}
-                    >
-                      {timer > 0 ? `Resend code in ${timer}s` : "Didn't receive code? Resend"}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {otpVerified && (
-                <div className="space-y-6 max-w-md mx-auto py-4 animate-in slide-in-from-bottom duration-300">
-                  <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-100 rounded-xl mb-6">
-                    <CheckCircle2 size={24} className="text-emerald-500 shrink-0" />
-                    <p className="text-sm font-medium text-emerald-800">Your identity has been verified. You can now set a new password.</p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="text-slate-700">New Password</Label>
-                      <div className="relative">
-                        <Input
-                          type={showNew ? "text" : "password"}
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                          className="h-11 pr-10 border-slate-200 focus:ring-indigo-500"
-                          placeholder="Min 8 characters"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowNew(!showNew)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                        >
-                          {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-slate-700">Confirm New Password</Label>
-                      <div className="relative">
-                        <Input
-                          type={showConfirm ? "text" : "password"}
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          className="h-11 pr-10 border-slate-200 focus:ring-indigo-500"
-                          placeholder="Repeat new password"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirm(!showConfirm)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                        >
-                          {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="pt-2">
-                      <ul className="text-[11px] text-slate-500 space-y-1 ml-2 list-disc">
-                        <li className={newPassword.length >= 8 ? "text-emerald-600 font-bold" : ""}>Minimum 8 characters</li>
-                        <li className={/[A-Z]/.test(newPassword) && /[a-z]/.test(newPassword) ? "text-emerald-600 font-bold" : ""}>Uppercase & lowercase letters</li>
-                        <li className={/[0-9]/.test(newPassword) ? "text-emerald-600 font-bold" : ""}>At least one number</li>
-                      </ul>
-                    </div>
-
-                    <Button 
-                      onClick={handleChangePassword}
-                      disabled={changingPassword || !newPassword}
-                      className="w-full h-12 bg-indigo-600 hover:bg-indigo-700 rounded-xl font-bold shadow-lg shadow-indigo-100"
-                    >
-                      {changingPassword ? <Loader2 className="animate-spin mr-2" /> : null}
-                      Update Secure Password
-                    </Button>
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>
