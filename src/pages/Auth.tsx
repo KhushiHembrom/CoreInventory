@@ -14,13 +14,10 @@ export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
   const [role, setRole] = useState("staff");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
-
-  const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]{9,14}$/;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,21 +33,13 @@ export default function Auth() {
           navigate("/dashboard");
         }
       } else {
-        // Validation for phone number
-        if (!phoneRegex.test(phoneNumber)) {
-          toast.error("Please enter a valid phone number");
-          setLoading(false);
-          return;
-        }
-
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: { 
               full_name: fullName, 
-              role,
-              phone_number: phoneNumber 
+              role
             },
             emailRedirectTo: window.location.origin,
           },
@@ -66,7 +55,6 @@ export default function Auth() {
               id: data.user.id,
               full_name: fullName,
               email: email,
-              phone_number: phoneNumber,
               role: role
             });
             
@@ -94,14 +82,19 @@ export default function Auth() {
     if (error) toast.error(error.message);
   };
 
-  const handleForgotPassword = async () => {
-    if (!email) { toast.error("Please enter your email address first"); return; }
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    if (error) toast.error(error.message);
-    else toast.success("Password reset instructions have been sent to your email");
-  };
+  const handleForgotPassword = async () => { 
+    if (!email) { 
+      toast.error("Please enter your email address first") 
+      return 
+    } 
+    setLoading(true) 
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { 
+      redirectTo: `${window.location.origin}/reset-password`, 
+    }) 
+    setLoading(false) 
+    if (error) toast.error(error.message) 
+    else toast.success("Password reset link sent! Check your email inbox.") 
+  } 
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-900 via-slate-900 to-black">
@@ -165,18 +158,6 @@ export default function Auth() {
                       required 
                       className="bg-slate-800/50 border-slate-700 text-slate-200 h-11 rounded-xl focus:ring-indigo-500/20"
                       placeholder="John Doe"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phoneNumber" className="text-xs font-bold text-slate-400 uppercase tracking-wider">Phone Number</Label>
-                    <Input 
-                      id="phoneNumber" 
-                      type="tel"
-                      value={phoneNumber} 
-                      onChange={(e) => setPhoneNumber(e.target.value)} 
-                      required 
-                      className="bg-slate-800/50 border-slate-700 text-slate-200 h-11 rounded-xl focus:ring-indigo-500/20"
-                      placeholder="+91 98765 43210"
                     />
                   </div>
                 </>
