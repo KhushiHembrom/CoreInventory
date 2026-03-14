@@ -82,18 +82,12 @@ export default function Auth() {
     if (error) toast.error(error.message);
   };
 
-  const handleForgotPassword = async () => { 
+  const handleForgotPassword = () => { 
     if (!email) { 
       toast.error("Please enter your email address first") 
       return 
     } 
-    setLoading(true) 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { 
-      redirectTo: `${window.location.origin}/reset-password`, 
-    }) 
-    setLoading(false) 
-    if (error) toast.error(error.message) 
-    else toast.success("Password reset link sent! Check your email inbox.") 
+    navigate(`/forgot-password?email=${encodeURIComponent(email)}`) 
   } 
 
   return (

@@ -10,6 +10,7 @@ import { useAuthStore } from "@/stores/authStore";
 
 import { AppLayout } from "@/components/layout/AppLayout";
 import Auth from "@/pages/Auth";
+import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import Dashboard from "@/pages/Dashboard";
 import Products from "@/pages/Products";
@@ -119,6 +120,7 @@ function AppContent() {
   return (
     <Routes>
       <Route path="/auth" element={<Auth />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
