@@ -47,17 +47,17 @@ export function AppHeader({ title }: { title: string }) {
   const alertCount = alertItems?.length || 0;
 
   return (
-    <header className="h-16 border-b bg-white/80 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-40 shadow-sm border-slate-100">
+    <header className="h-16 border-b bg-white/80 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-30 shadow-sm border-slate-100">
       <div className="flex items-center gap-4">
         <SidebarTrigger />
         <div className="h-6 w-[1px] bg-slate-200 mx-2" />
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Warehouse className="h-4 w-4" />
           <Select value={selectedWarehouseId || "all"} onValueChange={id => setSelectedWarehouseId(id === "all" ? null : id)}>
-            <SelectTrigger className="h-8 border-none bg-transparent hover:bg-slate-100 focus:ring-0 px-2 gap-2 font-medium text-slate-900">
+            <SelectTrigger className="w-[180px] h-9 border-gray-200 bg-white hover:bg-slate-50 focus:ring-0 px-3 gap-2 text-sm font-medium text-slate-900 transition-colors">
               <SelectValue placeholder="All Warehouses" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-50" position="popper" sideOffset={5}>
               <SelectItem value="all">All Locations</SelectItem>
               {warehouses?.map(w => (
                 <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>

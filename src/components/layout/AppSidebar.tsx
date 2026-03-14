@@ -63,7 +63,7 @@ export function AppSidebar() {
   const initials = profile?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-indigo-950/20 bg-slate-900 text-slate-100 shadow-2xl">
+    <Sidebar collapsible="icon" className="border-r border-indigo-950/20 bg-slate-900 text-slate-100 shadow-2xl z-20">
       <div className="p-6 flex items-center gap-3">
         <div className="h-9 w-9 rounded-xl bg-indigo-500 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.5)]">
           <ShieldCheck className="h-5 w-5 text-white" />
