@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuthStore } from "@/stores/authStore";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,8 @@ export default function Receipts() {
   const [activeTab, setActiveTab] = useState("all");
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
+  const { profile } = useAuthStore();
+  const isManager = profile?.role === 'manager';
 
   const { data: receipts, isLoading } = useQuery({
     queryKey: ["receipts"],
@@ -64,10 +67,12 @@ export default function Receipts() {
           <h1 className="text-2xl font-bold tracking-tight">Purchase Receipts</h1>
           <p className="text-sm text-muted-foreground">Manage and validate incoming stock from suppliers</p>
         </div>
-        <Button onClick={() => navigate("/receipts/new")} className="gap-2 shadow-sm">
-          <Plus className="h-4 w-4" />
-          New Receipt
-        </Button>
+        {isManager && (
+          <Button onClick={() => navigate("/receipts/new")} className="gap-2 shadow-sm">
+            <Plus className="h-4 w-4" />
+            New Receipt
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

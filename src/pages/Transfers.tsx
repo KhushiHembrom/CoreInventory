@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuthStore } from "@/stores/authStore";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,8 @@ export default function Transfers() {
   const [activeTab, setActiveTab] = useState("all");
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
+  const { profile } = useAuthStore();
+  const isManager = profile?.role === 'manager';
 
   const { data: transfers, isLoading } = useQuery({
     queryKey: ["transfers"],
@@ -68,10 +71,12 @@ export default function Transfers() {
           <h1 className="text-2xl font-bold tracking-tight">Internal Transfers</h1>
           <p className="text-sm text-muted-foreground">Move stock between your warehouse locations</p>
         </div>
-        <Button onClick={() => navigate("/transfers/new")} className="gap-2 shadow-sm bg-indigo-600 hover:bg-indigo-700">
-          <Plus className="h-4 w-4" />
-          New Transfer
-        </Button>
+        {isManager && (
+          <Button onClick={() => navigate("/transfers/new")} className="gap-2 shadow-sm bg-indigo-600 hover:bg-indigo-700">
+            <Plus className="h-4 w-4" />
+            New Transfer
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

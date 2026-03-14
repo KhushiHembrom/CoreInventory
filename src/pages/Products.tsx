@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuthStore } from "@/stores/authStore";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,8 @@ export default function Products() {
 
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const { profile } = useAuthStore();
+  const isManager = profile?.role === 'manager';
 
   const { data: products, isLoading: productsLoading } = useQuery({
     queryKey: ["products"],
@@ -138,88 +141,90 @@ export default function Products() {
           <h1 className="text-2xl font-bold tracking-tight">Products Catalog</h1>
           <p className="text-sm text-muted-foreground">Manage your inventory products and stock levels</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2 shadow-sm">
-              <Plus className="h-4 w-4" />
-              Add Product
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add New Product</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={(e) => { e.preventDefault(); addMutation.mutate(); }} className="space-y-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">Product Name*</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={e => setFormData(f => ({ ...f, name: e.target.value }))}
-                  placeholder="e.g. Wireless Mouse"
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="sku">SKU*</Label>
-                <div className="flex gap-2">
+        {isManager && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2 shadow-sm">
+                <Plus className="h-4 w-4" />
+                Add Product
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Add New Product</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={(e) => { e.preventDefault(); addMutation.mutate(); }} className="space-y-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Product Name*</Label>
                   <Input
-                    id="sku"
-                    value={formData.sku}
-                    onChange={e => setFormData(f => ({ ...f, sku: e.target.value }))}
-                    placeholder="Enter or suggest SKU"
-                    className="font-mono"
+                    id="name"
+                    value={formData.name}
+                    onChange={e => setFormData(f => ({ ...f, name: e.target.value }))}
+                    placeholder="e.g. Wireless Mouse"
+                    required
                   />
-                  <Button type="button" variant="outline" size="sm" onClick={handleSuggestSku}>Suggest</Button>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label>Category</Label>
-                  <Select value={formData.categoryId} onValueChange={v => setFormData(f => ({ ...f, categoryId: v }))}>
-                    <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
-                    <SelectContent>
-                      {categories?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
                 </div>
                 <div className="grid gap-2">
-                  <Label>Unit of Measure</Label>
-                  <Select value={formData.unit} onValueChange={v => setFormData(f => ({ ...f, unit: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {UNITS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="sku">SKU*</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="sku"
+                      value={formData.sku}
+                      onChange={e => setFormData(f => ({ ...f, sku: e.target.value }))}
+                      placeholder="Enter or suggest SKU"
+                      className="font-mono"
+                    />
+                    <Button type="button" variant="outline" size="sm" onClick={handleSuggestSku}>Suggest</Button>
+                  </div>
                 </div>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="reorder">Reorder Level</Label>
-                <Input
-                  id="reorder"
-                  type="number"
-                  value={formData.reorderLevel}
-                  onChange={e => setFormData(f => ({ ...f, reorderLevel: e.target.value }))}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="desc">Description</Label>
-                <Textarea
-                  id="desc"
-                  value={formData.description}
-                  onChange={e => setFormData(f => ({ ...f, description: e.target.value }))}
-                  placeholder="Optional product description..."
-                />
-              </div>
-              <DialogFooter className="pt-4">
-                <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button type="submit" disabled={addMutation.isPending}>
-                  {addMutation.isPending ? "Saving..." : "Create Product"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label>Category</Label>
+                    <Select value={formData.categoryId} onValueChange={v => setFormData(f => ({ ...f, categoryId: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
+                      <SelectContent>
+                        {categories?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Unit of Measure</Label>
+                    <Select value={formData.unit} onValueChange={v => setFormData(f => ({ ...f, unit: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {UNITS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="reorder">Reorder Level</Label>
+                  <Input
+                    id="reorder"
+                    type="number"
+                    value={formData.reorderLevel}
+                    onChange={e => setFormData(f => ({ ...f, reorderLevel: e.target.value }))}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="desc">Description</Label>
+                  <Textarea
+                    id="desc"
+                    value={formData.description}
+                    onChange={e => setFormData(f => ({ ...f, description: e.target.value }))}
+                    placeholder="Optional product description..."
+                  />
+                </div>
+                <DialogFooter className="pt-4">
+                  <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+                  <Button type="submit" disabled={addMutation.isPending}>
+                    {addMutation.isPending ? "Saving..." : "Create Product"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -307,9 +312,11 @@ export default function Products() {
                           <DropdownMenuItem onClick={() => navigate(`/products/${p.id}`)} className="gap-2">
                             <Eye size={14} /> View Details
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="gap-2">
-                            <Edit size={14} /> Edit Product
-                          </DropdownMenuItem>
+                          {isManager && (
+                            <DropdownMenuItem className="gap-2">
+                              <Edit size={14} /> Edit Product
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
