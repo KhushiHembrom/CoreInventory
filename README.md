@@ -265,11 +265,11 @@ The `vercel.json` in the repo already handles SPA routing correctly.
 
 | Dashboard | Products |
 |---|---|
-| ![Dashboard](https://placehold.co/600x400/f8fafc/1e3a5f?text=Dashboard) | ![Products](https://placehold.co/600x400/f8fafc/1e3a5f?text=Products) |
+| ![Dashboard](https://i.ibb.co/RKmZsQQ/Dashboard.png) | ![Products](https://i.ibb.co/SDXkc2qK/Product.png) |
 
 | Receipts | Stock Ledger |
 |---|---|
-| ![Receipts](https://placehold.co/600x400/f8fafc/1e3a5f?text=Receipts) | ![Ledger](https://placehold.co/600x400/f8fafc/1e3a5f?text=Stock+Ledger) |
+| ![Receipts](https://i.ibb.co/20XnTNTn/Receipt.png) | ![Ledger](https://i.ibb.co/9kBC0kRr/Stock-Ledger.png) |
 
 ---
 
