@@ -246,37 +246,38 @@ export default function Dashboard() {
   const pendingDeliveriesCount = deliveries?.filter(d => ["Waiting", "Ready"].includes(d.status || "")).length || 0;
   const scheduledTransfersCount = transfers?.filter(t => ["Draft", "Waiting"].includes(t.status || "")).length || 0;
 
-  // combined loading state
-  const isInitialLoading = stockLoading || productsLoading || receiptsLoading || deliveriesLoading || transfersLoading || ledgerLoading;
+  // Combined loading state: only wait for the most critical inventory data
+  const isInitialLoading = stockLoading || productsLoading;
+  
+  // Handlers for error detail
+  const errorDetail = (stockErrorInfo as any)?.message || "Check your database connection or permissions.";
 
   if (isInitialLoading) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <Skeleton className="h-10 w-48" />
-          <Skeleton className="h-10 w-24" />
+          <Skeleton className="h-10 w-48 bg-slate-100" />
+          <Skeleton className="h-10 w-24 bg-slate-100" />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-32 rounded-xl" />
+            <Skeleton key={i} className="h-32 rounded-xl bg-slate-50" />
           ))}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Skeleton className="h-80 rounded-xl lg:col-span-2" />
-          <Skeleton className="h-80 rounded-xl" />
+          <Skeleton className="h-[400px] rounded-xl lg:col-span-2 bg-slate-50" />
+          <Skeleton className="h-[400px] rounded-xl bg-slate-50" />
         </div>
       </div>
     );
   }
 
-  if (stockError) {
+  if (stockError || (productsLoading === false && !products)) {
     return (
       <div className="p-8 text-center flex flex-col items-center justify-center min-h-[400px]">
         <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
-        <h2 className="text-xl font-bold mb-2">Error loading dashboard</h2>
-        <p className="text-muted-foreground mb-6 max-w-md">
-          {stockErrorInfo instanceof Error ? stockErrorInfo.message : "We couldn't fetch the latest inventory data. This might be due to a database connection issue or permissions."}
-        </p>
+        <h2 className="text-xl font-bold mb-2">Notice</h2>
+        <p className="text-muted-foreground mb-6 max-w-md">{errorDetail}</p>
         <Button onClick={() => queryClient.invalidateQueries()}>
           <RefreshCcw className="mr-2 h-4 w-4" />
           Retry Now
@@ -284,6 +285,9 @@ export default function Dashboard() {
       </div>
     );
   }
+
+  const { profile } = useAuthStore();
+  const isManager = profile?.role === 'manager';
 
   // Chart data
   const top5Products = productsWithStock
@@ -298,13 +302,18 @@ export default function Dashboard() {
     { name: "Receipts", value: receipts?.length || 0 },
     { name: "Deliveries", value: deliveries?.length || 0 },
     { name: "Transfers", value: transfers?.length || 0 },
-    { name: "Adjustments", value: adjustments?.length || 0 },
-  ].filter(d => d.value > 0);
+    isManager ? { name: "Adjustments", value: adjustments?.length || 0 } : null,
+  ].filter((d): d is { name: string; value: number } => Boolean(d && d.value > 0));
+
+  const filteredLedger = ledger?.filter(entry => {
+    if (isManager) return true;
+    return entry.operation_type !== 'adjustment';
+  }) || [];
 
   const last7DaysData = Array.from({ length: 7 }, (_, i) => {
     const date = subDays(new Date(), 6 - i);
     const dateStr = format(date, "yyyy-MM-dd");
-    const count = ledger?.filter(l => l.created_at?.startsWith(dateStr)).length || 0;
+    const count = filteredLedger?.filter(l => l.created_at?.startsWith(dateStr)).length || 0;
     return {
       date: format(date, "MMM dd"),
       movements: count,
@@ -598,7 +607,7 @@ export default function Dashboard() {
           <Button variant="ghost" size="sm" className="text-xs font-medium">View All</Button>
         </CardHeader>
         <CardContent className="p-0">
-          {!ledger?.length ? (
+          {!filteredLedger?.length ? (
             <div className="p-12 flex flex-col items-center justify-center gap-3 text-muted-foreground">
               <Package className="h-10 w-10 opacity-10" />
               <p className="text-sm">No recent activities found</p>
@@ -616,7 +625,7 @@ export default function Dashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {ledger.map((entry) => (
+                {filteredLedger.map((entry) => (
                   <TableRow key={entry.id} className="hover:bg-muted/20 transition-colors border-b border-gray-50 last:border-0">
                     <TableCell className="text-xs text-muted-foreground">
                       {entry.created_at ? format(new Date(entry.created_at), "MMM dd, HH:mm") : "-"}
