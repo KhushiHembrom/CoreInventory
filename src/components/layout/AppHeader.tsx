@@ -7,7 +7,7 @@ import { useWarehouseStore } from "@/stores/warehouseStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
 export function AppHeader({ title }: { title: string }) {
@@ -92,8 +92,9 @@ export function AppHeader({ title }: { title: string }) {
           </PopoverContent>
         </Popover>
 
-        <Avatar className="h-8 w-8">
-          <AvatarFallback className="bg-primary text-primary-foreground text-xs">{initials}</AvatarFallback>
+        <Avatar className="h-8 w-8 border border-border shrink-0">
+          <AvatarImage src={profile?.avatar_url || (useAuthStore.getState().user?.user_metadata?.avatar_url)} />
+          <AvatarFallback className="bg-indigo-600 text-white text-[10px] font-bold">{initials}</AvatarFallback>
         </Avatar>
       </div>
     </header>

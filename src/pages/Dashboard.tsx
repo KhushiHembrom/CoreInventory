@@ -1,5 +1,7 @@
+import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuthStore } from "@/stores/authStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Package,
@@ -84,69 +86,83 @@ export default function Dashboard() {
   });
 
   // Data Fetching
+  const { user } = useAuthStore();
+  
   const { data: warehouses } = useQuery({
     queryKey: ["warehouses"],
     queryFn: async () => {
-      const { data } = await supabase.from("warehouses").select("*");
+      const { data, error } = await supabase.from("warehouses").select("*");
+      if (error) throw error;
       return data || [];
     },
+    enabled: !!user,
   });
 
   const { data: categories } = useQuery({
     queryKey: ["categories"],
     queryFn: async () => {
-      const { data } = await supabase.from("categories").select("*");
+      const { data, error } = await supabase.from("categories").select("*");
+      if (error) throw error;
       return data || [];
     },
+    enabled: !!user,
   });
 
-  const { data: stock, isLoading: stockLoading } = useQuery({
+  const { data: stock, isLoading: stockLoading, isError: stockError, error: stockErrorInfo } = useQuery({
     queryKey: ["dashboard-stock", filters.warehouse],
     queryFn: async () => {
       let query = supabase.from("stock").select("*, products(*)");
       if (filters.warehouse !== "all") {
         query = query.eq("warehouse_id", filters.warehouse);
       }
-      const { data } = await query;
+      const { data, error } = await query;
+      if (error) throw error;
       return data || [];
     },
+    enabled: !!user,
   });
 
-  const { data: products } = useQuery({
+  const { data: products, isLoading: productsLoading } = useQuery({
     queryKey: ["dashboard-products", filters.category],
     queryFn: async () => {
       let query = supabase.from("products").select("*, categories(*)");
       if (filters.category !== "all") {
         query = query.eq("category_id", filters.category);
       }
-      const { data } = await query;
+      const { data, error } = await query;
+      if (error) throw error;
       return data || [];
     },
+    enabled: !!user,
   });
 
-  const { data: receipts } = useQuery({
+  const { data: receipts, isLoading: receiptsLoading } = useQuery({
     queryKey: ["dashboard-receipts", filters.warehouse, filters.status],
     queryFn: async () => {
       let query = supabase.from("receipts").select("*");
       if (filters.warehouse !== "all") query = query.eq("warehouse_id", filters.warehouse);
       if (filters.status !== "all") query = query.eq("status", filters.status);
-      const { data } = await query;
+      const { data, error } = await query;
+      if (error) throw error;
       return data || [];
     },
+    enabled: !!user,
   });
 
-  const { data: deliveries } = useQuery({
+  const { data: deliveries, isLoading: deliveriesLoading } = useQuery({
     queryKey: ["dashboard-deliveries", filters.warehouse, filters.status],
     queryFn: async () => {
       let query = supabase.from("deliveries").select("*");
       if (filters.warehouse !== "all") query = query.eq("warehouse_id", filters.warehouse);
       if (filters.status !== "all") query = query.eq("status", filters.status);
-      const { data } = await query;
+      const { data, error } = await query;
+      if (error) throw error;
       return data || [];
     },
+    enabled: !!user,
   });
 
-  const { data: transfers } = useQuery({
+  const { data: transfers, isLoading: transfersLoading } = useQuery({
     queryKey: ["dashboard-transfers", filters.warehouse, filters.status],
     queryFn: async () => {
       let query = supabase.from("internal_transfers").select("*");
@@ -154,9 +170,11 @@ export default function Dashboard() {
         query = query.or(`from_warehouse_id.eq.${filters.warehouse},to_warehouse_id.eq.${filters.warehouse}`);
       }
       if (filters.status !== "all") query = query.eq("status", filters.status);
-      const { data } = await query;
+      const { data, error } = await query;
+      if (error) throw error;
       return data || [];
     },
+    enabled: !!user,
   });
 
   const { data: adjustments } = useQuery({
@@ -164,12 +182,14 @@ export default function Dashboard() {
     queryFn: async () => {
       let query = supabase.from("stock_adjustments").select("*");
       if (filters.warehouse !== "all") query = query.eq("warehouse_id", filters.warehouse);
-      const { data } = await query;
+      const { data, error } = await query;
+      if (error) throw error;
       return data || [];
     },
+    enabled: !!user,
   });
 
-  const { data: ledger } = useQuery({
+  const { data: ledger, isLoading: ledgerLoading } = useQuery({
     queryKey: ["dashboard-ledger", filters.warehouse],
     queryFn: async () => {
       let query = supabase
@@ -180,9 +200,11 @@ export default function Dashboard() {
       if (filters.warehouse !== "all") {
         query = query.eq("warehouse_id", filters.warehouse);
       }
-      const { data } = await query;
+      const { data, error } = await query;
+      if (error) throw error;
       return data || [];
     },
+    enabled: !!user,
   });
 
   // Realtime subscription
@@ -196,25 +218,22 @@ export default function Dashboard() {
       setTimeout(() => setLiveIndicator(false), 2000);
     };
 
-    const tables = ["stock", "receipts", "deliveries", "internal_transfers"];
-    const subscriptions = tables.map((table) =>
-      supabase
-        .channel(`public:${table}`)
-        .on("postgres_changes", { event: "*", schema: "public", table }, refreshData)
-        .subscribe()
-    );
+    const channel = supabase
+      .channel('dashboard-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock' }, refreshData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'receipts' }, refreshData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries' }, refreshData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'internal_transfers' }, refreshData)
+      .subscribe();
 
     return () => {
-      subscriptions.forEach((sub) => supabase.removeChannel(sub));
+      supabase.removeChannel(channel);
     };
   }, [queryClient]);
 
   // Calculations
-  const totalProductsInStock = stock?.reduce((sum, s) => sum + (s.quantity || 0), 0) || 0;
+  const totalProductsInStock = stock?.reduce((sum, s) => sum + (s.quantity || 0), 0) ?? 0;
 
-  // For Low Stock and Out of Stock, we need to respect the product filters and stock filters
-  // If warehouse filter is 'all', check total stock per product
-  // If warehouse filter is specific, check stock for that warehouse
   const productsWithStock = products?.map(p => {
     const productStock = stock?.filter(s => s.product_id === p.id).reduce((sum, s) => sum + (s.quantity || 0), 0) || 0;
     return { ...p, current_qty: productStock };
@@ -226,6 +245,45 @@ export default function Dashboard() {
   const pendingReceiptsCount = receipts?.filter(r => ["Waiting", "Ready"].includes(r.status || "")).length || 0;
   const pendingDeliveriesCount = deliveries?.filter(d => ["Waiting", "Ready"].includes(d.status || "")).length || 0;
   const scheduledTransfersCount = transfers?.filter(t => ["Draft", "Waiting"].includes(t.status || "")).length || 0;
+
+  // combined loading state
+  const isInitialLoading = stockLoading || productsLoading || receiptsLoading || deliveriesLoading || transfersLoading || ledgerLoading;
+
+  if (isInitialLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-10 w-48" />
+          <Skeleton className="h-10 w-24" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-32 rounded-xl" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Skeleton className="h-80 rounded-xl lg:col-span-2" />
+          <Skeleton className="h-80 rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
+  if (stockError) {
+    return (
+      <div className="p-8 text-center flex flex-col items-center justify-center min-h-[400px]">
+        <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
+        <h2 className="text-xl font-bold mb-2">Error loading dashboard</h2>
+        <p className="text-muted-foreground mb-6 max-w-md">
+          {stockErrorInfo instanceof Error ? stockErrorInfo.message : "We couldn't fetch the latest inventory data. This might be due to a database connection issue or permissions."}
+        </p>
+        <Button onClick={() => queryClient.invalidateQueries()}>
+          <RefreshCcw className="mr-2 h-4 w-4" />
+          Retry Now
+        </Button>
+      </div>
+    );
+  }
 
   // Chart data
   const top5Products = productsWithStock
@@ -305,26 +363,6 @@ export default function Dashboard() {
       trendUp: true,
     },
   ];
-
-  if (stockLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-10 w-48" />
-          <Skeleton className="h-10 w-24" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-32 rounded-xl" />
-          ))}
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Skeleton className="h-80 rounded-xl lg:col-span-2" />
-          <Skeleton className="h-80 rounded-xl" />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -414,10 +452,13 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {kpis.map((kpi, i) => (
-          <Card key={i} className={`border-none shadow-sm overflow-hidden ${kpi.bg || "bg-white"}`}>
+          <Card 
+            key={i} 
+            className={`border-none shadow-sm overflow-hidden transition-all duration-200 ${kpi.bg || "bg-white"} ${kpi.onClick ? "cursor-pointer hover:ring-2 hover:ring-indigo-500/20 active:scale-[0.98]" : ""}`}
+            onClick={kpi.onClick}
+          >
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className={`p-2 rounded-lg bg-white shadow-sm border border-gray-100`}>

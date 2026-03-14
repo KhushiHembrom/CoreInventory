@@ -39,56 +39,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   
   if (loading) {
     return (
-      <div className="min-h-screen flex w-full bg-slate-50/50">
-        {/* Sidebar Skeleton */}
-        <div className="w-64 border-r border-slate-200/50 bg-white p-6 hidden md:block">
-          <div className="flex items-center gap-3 mb-10">
-            <Skeleton className="h-9 w-9 rounded-xl" />
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-3 w-16" />
-            </div>
-          </div>
-          <div className="space-y-6">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="flex items-center gap-3">
-                <Skeleton className="h-4 w-4 rounded" />
-                <Skeleton className="h-4 w-32" />
-              </div>
-            ))}
-          </div>
-        </div>
-        
-        {/* Main Content Skeleton */}
-        <div className="flex-1 flex flex-col">
-          <header className="h-16 border-b border-slate-200/50 bg-white flex items-center px-8">
-            <Skeleton className="h-5 w-40" />
-            <div className="ml-auto flex items-center gap-4">
-              <Skeleton className="h-8 w-8 rounded-full" />
-              <Skeleton className="h-8 w-24 rounded-lg" />
-            </div>
-          </header>
-          <main className="p-8 space-y-8 max-w-7xl w-full mx-auto">
-             <div className="flex justify-between items-center">
-                <div className="space-y-2">
-                    <Skeleton className="h-8 w-64" />
-                    <Skeleton className="h-4 w-48" />
-                </div>
-                <div className="flex gap-3">
-                    <Skeleton className="h-9 w-32" />
-                    <Skeleton className="h-9 w-32" />
-                </div>
-             </div>
-             
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32 w-full rounded-xl" />)}
-             </div>
-             
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <Skeleton className="h-80 w-full rounded-xl" />
-                <Skeleton className="h-80 w-full rounded-xl" />
-             </div>
-          </main>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 
+                          border-indigo-600 mx-auto mb-4" />
+          <p className="text-gray-500 text-sm">Loading CoreInventory...</p>
         </div>
       </div>
     );
@@ -102,39 +57,67 @@ function AppContent() {
   const { setUser, setProfile, setLoading } = useAuthStore();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
+    let mounted = true;
+
+    const updateAuthState = async (session: any) => {
+      if (!mounted) return;
+      
+      const currentUser = session?.user ?? null;
+      
+      if (currentUser) {
         try {
-          const { data } = await supabase.from("profiles").select("*").eq("id", session.user.id).single();
-          setProfile(data);
+          const { data, error } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", currentUser.id)
+            .single();
+            
+          if (mounted) {
+            if (error) {
+              console.error("Profile fetch error:", error);
+            }
+            setUser(currentUser);
+            setProfile(data || null);
+            setLoading(false);
+          }
         } catch (error) {
-          console.error("Error fetching profile on auth change:", error);
+          console.error("Critical profile fetch error:", error);
+          if (mounted) {
+            setUser(currentUser);
+            setLoading(false);
+          }
         }
       } else {
-        setProfile(null);
-      }
-      setLoading(false);
-    });
-
-    const initSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          const { data } = await supabase.from("profiles").select("*").eq("id", session.user.id).single();
-          setProfile(data);
+        if (mounted) {
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
         }
-      } catch (error) {
-        console.error("Error initializing session:", error);
-      } finally {
-        setLoading(false);
       }
     };
 
-    initSession();
+    const initAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (mounted) await updateAuthState(session);
+    };
 
-    return () => subscription.unsubscribe();
+    initAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+        if (mounted) await updateAuthState(session);
+      }
+    });
+
+    const safetyTimeout = setTimeout(() => {
+      if (mounted) setLoading(false);
+    }, 5000);
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+      clearTimeout(safetyTimeout);
+    };
   }, [setUser, setProfile, setLoading]);
 
   return (

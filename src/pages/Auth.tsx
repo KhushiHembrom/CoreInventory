@@ -14,10 +14,13 @@ export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [role, setRole] = useState("staff");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+
+  const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]{9,14}$/;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,21 +32,48 @@ export default function Auth() {
         if (error) {
           toast.error(error.message);
         } else {
-          toast.success("Welcome back to StockSavvy!");
+          toast.success("Welcome back to CoreInventory!");
           navigate("/dashboard");
         }
       } else {
-        const { error } = await supabase.auth.signUp({
+        // Validation for phone number
+        if (!phoneRegex.test(phoneNumber)) {
+          toast.error("Please enter a valid phone number");
+          setLoading(false);
+          return;
+        }
+
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            data: { full_name: fullName, role },
+            data: { 
+              full_name: fullName, 
+              role,
+              phone_number: phoneNumber 
+            },
             emailRedirectTo: window.location.origin,
           },
         });
+
         if (error) {
           toast.error(error.message);
-        } else {
+        } else if (data.user) {
+          // Manual upsert into profiles to ensure fields are captured immediately
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: data.user.id,
+              full_name: fullName,
+              email: email,
+              phone_number: phoneNumber,
+              role: role
+            });
+            
+          if (profileError) {
+            console.error("Profile upsert error:", profileError);
+          }
+          
           toast.success("Success! Please check your email to confirm your account.");
         }
       }
@@ -88,7 +118,7 @@ export default function Auth() {
               <ShieldCheck className="h-8 w-8 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-white tracking-tight">StockSavvy</h2>
+              <h2 className="text-2xl font-bold text-white tracking-tight">CoreInventory</h2>
               <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-[0.2em] mt-1">Inventory Intelligence</p>
             </div>
           </div>
@@ -125,17 +155,31 @@ export default function Auth() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {!isLogin && (
-                <div className="space-y-2">
-                  <Label htmlFor="fullName" className="text-xs font-bold text-slate-400 uppercase tracking-wider">Full Name</Label>
-                  <Input 
-                    id="fullName" 
-                    value={fullName} 
-                    onChange={(e) => setFullName(e.target.value)} 
-                    required 
-                    className="bg-slate-800/50 border-slate-700 text-slate-200 h-11 rounded-xl focus:ring-indigo-500/20"
-                    placeholder="John Doe"
-                  />
-                </div>
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName" className="text-xs font-bold text-slate-400 uppercase tracking-wider">Full Name</Label>
+                    <Input 
+                      id="fullName" 
+                      value={fullName} 
+                      onChange={(e) => setFullName(e.target.value)} 
+                      required 
+                      className="bg-slate-800/50 border-slate-700 text-slate-200 h-11 rounded-xl focus:ring-indigo-500/20"
+                      placeholder="John Doe"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phoneNumber" className="text-xs font-bold text-slate-400 uppercase tracking-wider">Phone Number</Label>
+                    <Input 
+                      id="phoneNumber" 
+                      type="tel"
+                      value={phoneNumber} 
+                      onChange={(e) => setPhoneNumber(e.target.value)} 
+                      required 
+                      className="bg-slate-800/50 border-slate-700 text-slate-200 h-11 rounded-xl focus:ring-indigo-500/20"
+                      placeholder="+91 98765 43210"
+                    />
+                  </div>
+                </>
               )}
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-xs font-bold text-slate-400 uppercase tracking-wider">Work Email</Label>
@@ -165,7 +209,7 @@ export default function Auth() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    minLength={6}
+                    minLength={8}
                     className="bg-slate-800/50 border-slate-700 text-slate-200 h-11 rounded-xl pr-12 focus:ring-indigo-500/20"
                     placeholder="••••••••"
                   />
@@ -215,7 +259,7 @@ export default function Auth() {
                 className="text-sm text-slate-400 hover:text-white transition-colors"
             >
               {isLogin ? (
-                <span>New to StockSavvy? <span className="text-indigo-400 font-bold">Join the team</span></span>
+                <span>New to CoreInventory? <span className="text-indigo-400 font-bold">Join the team</span></span>
               ) : (
                 <span>Already have an account? <span className="text-indigo-400 font-bold">Sign in</span></span>
               )}
@@ -224,7 +268,6 @@ export default function Auth() {
         </CardContent>
       </Card>
       
-      {/* Footer Branding */}
       <p className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[10px] text-slate-600 font-bold uppercase tracking-[0.4em] z-10">
         Secure Inventory Systems Inc.
       </p>

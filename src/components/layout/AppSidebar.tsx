@@ -1,7 +1,9 @@
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuthStore } from "@/stores/authStore";
 import {
   LayoutDashboard, Package, PackageCheck, Truck,
   ArrowLeftRight, SlidersHorizontal, History, Settings, User, LogOut,
-  ShieldCheck
+  ShieldCheck, Circle
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -11,6 +13,7 @@ import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarFooter, useSidebar,
 } from "@/components/ui/sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -26,12 +29,34 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const navigate = useNavigate();
+  const { profile, user } = useAuthStore();
+
+  const queryClient = useQueryClient();
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast.success("Logged out from StockSavvy");
-    navigate("/auth");
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        toast.error('Logout failed: ' + error.message);
+        return;
+      }
+      
+      // Clear any cached state
+      queryClient.clear();
+      
+      // Clear local and session storage
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      toast.success("Logged out from CoreInventory");
+      navigate("/auth", { replace: true });
+    } catch (err) {
+      toast.error("An unexpected error occurred during logout");
+      console.error(err);
+    }
   };
+
+  const initials = profile?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
 
   return (
     <Sidebar collapsible="icon" className="border-r border-slate-200/50 bg-slate-50/50 backdrop-blur-xl">
@@ -41,8 +66,8 @@ export function AppSidebar() {
         </div>
         {!collapsed && (
             <div className="flex flex-col">
-                <span className="font-bold text-slate-900 text-base leading-none">StockSavvy</span>
-                <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider mt-1">Pro Edition</span>
+                <span className="font-bold text-slate-900 text-base leading-none tracking-tight">CoreInventory</span>
+                <span className="text-[10px] text-indigo-600 font-bold uppercase tracking-[0.2em] mt-1">Enterprise</span>
             </div>
         )}
       </div>
@@ -70,39 +95,51 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-slate-200/50">
+      <SidebarFooter className="p-4 border-t border-slate-200/50 bg-slate-100/30">
+        {!collapsed && (
+          <div className="px-2 mb-4 flex items-center gap-3">
+             <Avatar className="h-9 w-9 border-2 border-white shadow-sm">
+                <AvatarImage src={profile?.avatar_url || user?.user_metadata?.avatar_url} />
+                <AvatarFallback className="bg-indigo-600 text-white text-[10px] font-bold">{initials}</AvatarFallback>
+             </Avatar>
+             <div className="flex flex-col min-w-0">
+                <span className="text-sm font-bold text-slate-900 truncate">{profile?.full_name || "User Name"}</span>
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider truncate">{profile?.role || "Staff"}</span>
+             </div>
+          </div>
+        )}
         <SidebarMenu className="gap-1">
           <SidebarMenuItem>
             <SidebarMenuButton asChild tooltip="Settings">
-                <NavLink
+              <NavLink
                 to="/settings"
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-500 hover:bg-white hover:text-slate-900 transition-all"
-                activeClassName="bg-white text-slate-900 shadow-sm"
-                >
-                <Settings className="h-4 w-4" />
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all duration-200 group"
+                activeClassName="bg-white text-indigo-600 shadow-sm font-semibold border-l-4 border-indigo-600"
+              >
+                <Settings className="h-4 w-4 shrink-0 transition-transform group-hover:scale-110" />
                 {!collapsed && <span className="text-sm">Settings</span>}
-                </NavLink>
+              </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild tooltip="My Profile">
               <NavLink
                 to="/profile"
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-500 hover:bg-white hover:text-slate-900 transition-all font-medium"
-                activeClassName="bg-white text-slate-900 shadow-sm"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all duration-200 group"
+                activeClassName="bg-white text-indigo-600 shadow-sm font-semibold border-l-4 border-indigo-600"
               >
-                <User className="h-4 w-4 shrink-0" />
-                {!collapsed && <span className="text-sm">Account</span>}
+                <User className="h-4 w-4 shrink-0 transition-transform group-hover:scale-110" />
+                {!collapsed && <span className="text-sm">Account Settings</span>}
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton 
                 onClick={handleLogout} 
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-all cursor-pointer mt-2"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-all cursor-pointer mt-1 group"
             >
-              <LogOut className="h-4 w-4 shrink-0" />
-              {!collapsed && <span className="text-sm">Log out</span>}
+              <LogOut className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
+              {!collapsed && <span className="text-sm font-medium">Log out</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

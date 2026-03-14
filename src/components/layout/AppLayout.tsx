@@ -2,6 +2,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { AppHeader } from "./AppHeader";
+import { CompleteProfileModal } from "../auth/CompleteProfileModal";
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -18,10 +19,11 @@ const pageTitles: Record<string, string> = {
 export function AppLayout() {
   const location = useLocation();
   const baseRoute = "/" + location.pathname.split("/")[1];
-  const title = pageTitles[baseRoute] || "StockSavvy";
+  const title = pageTitles[baseRoute] || "CoreInventory";
 
   return (
     <SidebarProvider>
+      <CompleteProfileModal />
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
