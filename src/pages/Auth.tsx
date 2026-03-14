@@ -114,8 +114,8 @@ export default function Auth() {
         
         <CardHeader className="text-center pt-10 pb-6">
           <div className="flex flex-col items-center gap-4 mb-6">
-            <div className="h-14 w-14 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 transform -rotate-3 hover:rotate-0 transition-transform duration-300">
-              <ShieldCheck className="h-8 w-8 text-white" />
+            <div className="h-14 w-14 rounded-2xl overflow-hidden shadow-lg shadow-indigo-500/20 transform -rotate-3 hover:rotate-0 transition-transform duration-300">
+                <img src="/favicon.png" alt="CoreInventory" className="h-full w-full object-cover" />
             </div>
             <div>
               <h2 className="text-2xl font-bold text-white tracking-tight">CoreInventory</h2>
