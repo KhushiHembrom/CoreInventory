@@ -18,7 +18,7 @@ const pageTitles: Record<string, string> = {
 export function AppLayout() {
   const location = useLocation();
   const baseRoute = "/" + location.pathname.split("/")[1];
-  const title = pageTitles[baseRoute] || "CoreInventory";
+  const title = pageTitles[baseRoute] || "StockSavvy";
 
   return (
     <SidebarProvider>
