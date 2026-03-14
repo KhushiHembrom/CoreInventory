@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
+import { useWarehouseStore } from "@/stores/warehouseStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Package,
@@ -25,6 +26,7 @@ import { format } from "date-fns";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 const OperationBadge = ({ type }: { type: string }) => {
   const styles: Record<string, string> = {
@@ -44,11 +46,18 @@ export default function StaffDashboard() {
   const queryClient = useQueryClient();
   const [liveIndicator, setLiveIndicator] = useState(false);
   const { user } = useAuthStore();
+  const { selectedWarehouseId } = useWarehouseStore();
+  
+  const warehouseId = selectedWarehouseId || "all";
 
   const { data: stock, isLoading: stockLoading } = useQuery({
-    queryKey: ["staff-stock"],
+    queryKey: ["staff-stock", warehouseId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("stock").select("*, products(*)");
+      let query = supabase.from("stock").select("*, products(*)");
+      if (warehouseId !== "all") {
+        query = query.eq("warehouse_id", warehouseId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
@@ -56,14 +65,18 @@ export default function StaffDashboard() {
   });
 
   const { data: ledger, isLoading: ledgerLoading } = useQuery({
-    queryKey: ["staff-ledger"],
+    queryKey: ["staff-ledger", warehouseId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("stock_ledger")
         .select("*, products(*), warehouses(*)")
         .neq("operation_type", "adjustment") // Filter out adjustments for staff
         .order("created_at", { ascending: false })
         .limit(10);
+      if (warehouseId !== "all") {
+        query = query.eq("warehouse_id", warehouseId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
@@ -71,9 +84,13 @@ export default function StaffDashboard() {
   });
 
   const { data: receipts } = useQuery({
-    queryKey: ["staff-receipts"],
+    queryKey: ["staff-receipts", warehouseId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("receipts").select("*").in("status", ["Waiting", "Ready"]);
+      let query = supabase.from("receipts").select("*").in("status", ["Waiting", "Ready"]);
+      if (warehouseId !== "all") {
+        query = query.eq("warehouse_id", warehouseId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
@@ -81,9 +98,13 @@ export default function StaffDashboard() {
   });
 
   const { data: deliveries } = useQuery({
-    queryKey: ["staff-deliveries"],
+    queryKey: ["staff-deliveries", warehouseId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("deliveries").select("*").in("status", ["Waiting", "Ready"]);
+      let query = supabase.from("deliveries").select("*").in("status", ["Waiting", "Ready"]);
+      if (warehouseId !== "all") {
+        query = query.eq("warehouse_id", warehouseId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
@@ -133,7 +154,14 @@ export default function StaffDashboard() {
             <span className="text-[10px] font-bold text-emerald-600 uppercase">Live</span>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => queryClient.invalidateQueries()}>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => {
+            queryClient.invalidateQueries();
+            toast.success("Dashboard data synced");
+          }}
+        >
           <RefreshCcw className="h-4 w-4 mr-2" />
           Sync
         </Button>

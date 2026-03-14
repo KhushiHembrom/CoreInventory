@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
@@ -9,10 +9,12 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { CheckCircle2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export default function DeliveryDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const qc = useQueryClient();
 
@@ -64,6 +66,15 @@ export default function DeliveryDetail() {
           <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Cancel delivery?</AlertDialogTitle><AlertDialogDescription>This cannot be undone.</AlertDialogDescription></AlertDialogHeader>
             <AlertDialogFooter><AlertDialogCancel>No</AlertDialogCancel><AlertDialogAction onClick={() => cancelMutation.mutate()}>Yes</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
       </div>}
+      {!canValidate && delivery.status === "Done" && (
+        <Button 
+          className="bg-emerald-600 hover:bg-emerald-700 gap-2" 
+          onClick={() => navigate("/deliveries")}
+        >
+          <CheckCircle2 className="h-4 w-4" />
+          Done
+        </Button>
+      )}
     </div>
   );
 }

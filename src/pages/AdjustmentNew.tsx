@@ -209,16 +209,21 @@ export default function AdjustmentNew() {
                             </Select>
                           </TableCell>
                           <TableCell className="py-3 text-right">
-                             <div className="h-9 flex items-center justify-end px-3 text-sm font-mono text-muted-foreground">
-                                {item.recorded_qty}
-                             </div>
+                             <Input 
+                                type="number" 
+                                min="0"
+                                className="h-9 text-right font-mono text-sm bg-white border-gray-100" 
+                                value={item.recorded_qty} 
+                                onChange={e => updateItem(i, "recorded_qty", Math.max(0, parseInt(e.target.value) || 0))} 
+                             />
                           </TableCell>
                           <TableCell className="py-3">
                             <Input 
                               type="number" 
+                              min="0"
                               className="h-9 text-right font-mono text-sm bg-white border-gray-100" 
                               value={item.actual_qty} 
-                              onChange={e => updateItem(i, "actual_qty", parseInt(e.target.value) || 0)} 
+                              onChange={e => updateItem(i, "actual_qty", Math.max(0, parseInt(e.target.value) || 0))} 
                             />
                           </TableCell>
                           <TableCell className="py-3 text-right">

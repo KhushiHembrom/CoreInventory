@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
@@ -9,9 +9,11 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { CheckCircle2 } from "lucide-react";
 
 export default function AdjustmentDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const qc = useQueryClient();
 
@@ -54,7 +56,23 @@ export default function AdjustmentDetail() {
             </TableRow>
           ))}</TableBody></Table>
       </CardContent></Card>
-      {adjustment.status !== "Done" && <Button onClick={() => validateMutation.mutate()} disabled={validateMutation.isPending}>Validate</Button>}
+      
+      <div className="flex gap-3">
+        {adjustment.status !== "Done" && (
+          <Button onClick={() => validateMutation.mutate()} disabled={validateMutation.isPending}>
+            Validate
+          </Button>
+        )}
+        {adjustment.status === "Done" && (
+          <Button 
+            className="bg-emerald-600 hover:bg-emerald-700 gap-2" 
+            onClick={() => navigate("/adjustments")}
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            Done
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

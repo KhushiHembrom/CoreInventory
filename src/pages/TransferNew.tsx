@@ -239,7 +239,7 @@ export default function TransferNew() {
                               min="1"
                               className={`h-9 text-right font-mono text-sm ${isOverStock && fromWarehouseId ? "bg-rose-50 border-rose-200 text-rose-600 font-bold" : "bg-white border-gray-100"}`} 
                               value={item.quantity} 
-                              onChange={e => updateItem(i, "quantity", parseInt(e.target.value) || 0)} 
+                              onChange={e => updateItem(i, "quantity", Math.max(1, parseInt(e.target.value) || 0))} 
                             />
                           </TableCell>
                           <TableCell className="py-3 text-right">

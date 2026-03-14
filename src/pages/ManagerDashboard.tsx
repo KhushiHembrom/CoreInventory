@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
+import { useWarehouseStore } from "@/stores/warehouseStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Package,
@@ -50,6 +51,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 const CHART_COLORS = [
   "hsl(213, 52%, 24%)",
@@ -87,7 +89,10 @@ export default function ManagerDashboard() {
 
   // Data Fetching
   const { user, profile } = useAuthStore();
+  const { selectedWarehouseId } = useWarehouseStore();
   
+  const warehouseId = selectedWarehouseId || "all";
+
   const { data: warehouses } = useQuery({
     queryKey: ["warehouses"],
     queryFn: async () => {
@@ -109,11 +114,11 @@ export default function ManagerDashboard() {
   });
 
   const { data: stock, isLoading: stockLoading, isError: stockError, error: stockErrorInfo } = useQuery({
-    queryKey: ["dashboard-stock", filters.warehouse],
+    queryKey: ["dashboard-stock", warehouseId],
     queryFn: async () => {
       let query = supabase.from("stock").select("*, products(*)");
-      if (filters.warehouse !== "all") {
-        query = query.eq("warehouse_id", filters.warehouse);
+      if (warehouseId !== "all") {
+        query = query.eq("warehouse_id", warehouseId);
       }
       const { data, error } = await query;
       if (error) throw error;
@@ -137,10 +142,10 @@ export default function ManagerDashboard() {
   });
 
   const { data: receipts, isLoading: receiptsLoading } = useQuery({
-    queryKey: ["dashboard-receipts", filters.warehouse, filters.status],
+    queryKey: ["dashboard-receipts", warehouseId, filters.status],
     queryFn: async () => {
       let query = supabase.from("receipts").select("*");
-      if (filters.warehouse !== "all") query = query.eq("warehouse_id", filters.warehouse);
+      if (warehouseId !== "all") query = query.eq("warehouse_id", warehouseId);
       if (filters.status !== "all") query = query.eq("status", filters.status);
       const { data, error } = await query;
       if (error) throw error;
@@ -150,10 +155,10 @@ export default function ManagerDashboard() {
   });
 
   const { data: deliveries, isLoading: deliveriesLoading } = useQuery({
-    queryKey: ["dashboard-deliveries", filters.warehouse, filters.status],
+    queryKey: ["dashboard-deliveries", warehouseId, filters.status],
     queryFn: async () => {
       let query = supabase.from("deliveries").select("*");
-      if (filters.warehouse !== "all") query = query.eq("warehouse_id", filters.warehouse);
+      if (warehouseId !== "all") query = query.eq("warehouse_id", warehouseId);
       if (filters.status !== "all") query = query.eq("status", filters.status);
       const { data, error } = await query;
       if (error) throw error;
@@ -163,11 +168,11 @@ export default function ManagerDashboard() {
   });
 
   const { data: transfers, isLoading: transfersLoading } = useQuery({
-    queryKey: ["dashboard-transfers", filters.warehouse, filters.status],
+    queryKey: ["dashboard-transfers", warehouseId, filters.status],
     queryFn: async () => {
       let query = supabase.from("internal_transfers").select("*");
-      if (filters.warehouse !== "all") {
-        query = query.or(`from_warehouse_id.eq.${filters.warehouse},to_warehouse_id.eq.${filters.warehouse}`);
+      if (warehouseId !== "all") {
+        query = query.or(`from_warehouse_id.eq.${warehouseId},to_warehouse_id.eq.${warehouseId}`);
       }
       if (filters.status !== "all") query = query.eq("status", filters.status);
       const { data, error } = await query;
@@ -178,10 +183,10 @@ export default function ManagerDashboard() {
   });
 
   const { data: adjustments } = useQuery({
-    queryKey: ["dashboard-adjustments", filters.warehouse],
+    queryKey: ["dashboard-adjustments", warehouseId],
     queryFn: async () => {
       let query = supabase.from("stock_adjustments").select("*");
-      if (filters.warehouse !== "all") query = query.eq("warehouse_id", filters.warehouse);
+      if (warehouseId !== "all") query = query.eq("warehouse_id", warehouseId);
       const { data, error } = await query;
       if (error) throw error;
       return data || [];
@@ -190,15 +195,15 @@ export default function ManagerDashboard() {
   });
 
   const { data: ledger, isLoading: ledgerLoading } = useQuery({
-    queryKey: ["dashboard-ledger", filters.warehouse],
+    queryKey: ["dashboard-ledger", warehouseId],
     queryFn: async () => {
       let query = supabase
         .from("stock_ledger")
         .select("*, products(*), warehouses(*)")
         .order("created_at", { ascending: false })
         .limit(10);
-      if (filters.warehouse !== "all") {
-        query = query.eq("warehouse_id", filters.warehouse);
+      if (warehouseId !== "all") {
+        query = query.eq("warehouse_id", warehouseId);
       }
       const { data, error } = await query;
       if (error) throw error;
@@ -381,7 +386,15 @@ export default function ManagerDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => queryClient.invalidateQueries()} className="gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => {
+              queryClient.invalidateQueries();
+              toast.success("Dashboard data refreshed");
+            }} 
+            className="gap-2"
+          >
             <RefreshCcw className="h-4 w-4" />
             Refresh
           </Button>

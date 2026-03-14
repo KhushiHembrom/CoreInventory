@@ -228,17 +228,19 @@ export default function DeliveryNew() {
                           <TableCell className="py-3">
                             <Input 
                               type="number" 
+                              min="1"
                               className="h-9 text-right font-mono text-sm bg-white border-gray-100" 
                               value={item.requested_qty} 
-                              onChange={e => updateItem(i, "requested_qty", parseInt(e.target.value) || 0)} 
+                              onChange={e => updateItem(i, "requested_qty", Math.max(1, parseInt(e.target.value) || 0))} 
                             />
                           </TableCell>
                           <TableCell className="py-3">
                             <Input 
                               type="number" 
+                              min="0"
                               className={`h-9 text-right font-mono text-sm ${isOverStock && warehouseId ? "bg-rose-50 border-rose-200 text-rose-600" : "bg-white border-gray-100"}`} 
                               value={item.delivered_qty} 
-                              onChange={e => updateItem(i, "delivered_qty", parseInt(e.target.value) || 0)} 
+                              onChange={e => updateItem(i, "delivered_qty", Math.max(0, parseInt(e.target.value) || 0))} 
                             />
                           </TableCell>
                           <TableCell className="py-3 text-right">

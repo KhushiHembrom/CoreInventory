@@ -207,7 +207,7 @@ export default function ReceiptNew() {
                             min="1"
                             className="h-9 text-right font-mono text-sm bg-white border-gray-100" 
                             value={item.expected_qty} 
-                            onChange={e => updateItem(i, "expected_qty", parseInt(e.target.value) || 0)} 
+                            onChange={e => updateItem(i, "expected_qty", Math.max(1, parseInt(e.target.value) || 0))} 
                           />
                         </TableCell>
                         <TableCell className="py-3">
@@ -216,7 +216,7 @@ export default function ReceiptNew() {
                             min="0"
                             className="h-9 text-right font-mono text-sm bg-indigo-50/50 border-indigo-100/50 focus:bg-white" 
                             value={item.received_qty} 
-                            onChange={e => updateItem(i, "received_qty", parseInt(e.target.value) || 0)} 
+                            onChange={e => updateItem(i, "received_qty", Math.max(0, parseInt(e.target.value) || 0))} 
                           />
                         </TableCell>
                         <TableCell className="py-3 text-center">

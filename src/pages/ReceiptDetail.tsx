@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { CheckCircle2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export default function ReceiptDetail() {
@@ -119,6 +120,15 @@ export default function ReceiptDetail() {
             </AlertDialogContent>
           </AlertDialog>
         </div>
+      )}
+      {!canValidate && receipt.status === "Done" && (
+        <Button 
+          className="bg-emerald-600 hover:bg-emerald-700 gap-2" 
+          onClick={() => navigate("/receipts")}
+        >
+          <CheckCircle2 className="h-4 w-4" />
+          Done
+        </Button>
       )}
     </div>
   );
