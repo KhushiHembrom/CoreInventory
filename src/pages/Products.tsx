@@ -114,6 +114,12 @@ export default function Products() {
     }) || [];
   }, [products, search, catFilter]);
 
+  const getStockStatus = (quantity: number, reorderLevel: number) => {
+    if (quantity === 0) return { label: "Out of Stock", color: "bg-rose-50 text-rose-600 border-rose-100" };
+    if (quantity < reorderLevel) return { label: "Low Stock", color: "bg-amber-50 text-amber-600 border-amber-100" };
+    return { label: "In Stock", color: "bg-emerald-50 text-emerald-600 border-emerald-100" };
+  };
+
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedProducts = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
@@ -133,6 +139,21 @@ export default function Products() {
       <Skeleton className="h-64 w-full rounded-xl" />
     </div>
   );
+
+  if (!products || products.length === 0) {
+    return (
+      <div className="h-[70vh] flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Package className="h-12 w-12 mx-auto text-muted-foreground opacity-20" />
+          <div>
+            <h3 className="text-lg font-medium">No products yet</h3>
+            <p className="text-muted-foreground">Start by adding your first product to the inventory</p>
+          </div>
+          <Button onClick={() => setOpen(true)}>Add Product</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

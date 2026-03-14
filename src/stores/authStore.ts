@@ -1,21 +1,54 @@
 import { create } from 'zustand';
-import type { User } from '@supabase/supabase-js';
-import type { Profile } from '@/types';
+import { User } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AuthState {
   user: User | null;
-  profile: Profile | null;
+  profile: any | null;
   loading: boolean;
-  setUser: (user: User | null) => void;
-  setProfile: (profile: Profile | null) => void;
-  setLoading: (loading: boolean) => void;
+  initialize: () => Promise<void>;
+  setProfile: (profile: any | null) => void;
+  reset: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   profile: null,
   loading: true,
-  setUser: (user) => set({ user }),
+
+  initialize: async () => {
+    // Get current session first
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session?.user) {
+      // Fetch profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+      
+      set({ user: session.user, profile, loading: false });
+    } else {
+      set({ user: null, profile: null, loading: false });
+    }
+
+    // Listen for auth changes
+    supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        set({ user: session.user, profile, loading: false });
+      } else {
+        set({ user: null, profile: null, loading: false });
+      }
+    });
+  },
+
   setProfile: (profile) => set({ profile }),
-  setLoading: (loading) => set({ loading }),
+
+  reset: () => set({ user: null, profile: null, loading: false }),
 }));

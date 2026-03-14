@@ -12,6 +12,9 @@ import { useNavigate } from "react-router-dom";
 import { Plus, Search, FileText, ChevronRight, Package, Warehouse, Calendar, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
+import { EmptyState } from "@/components/shared/EmptyState";
+import { PackageCheck, Truck, ArrowLeftRight, SlidersHorizontal, History as HistoryIcon } from "lucide-react";
+
 const StatusBadge = ({ status }: { status: string }) => {
   const styles: Record<string, string> = {
     Draft: "bg-gray-100 text-gray-600 border-gray-200",
@@ -113,10 +116,17 @@ export default function Receipts() {
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-64 text-center">
-                  <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                    <FileText className="h-8 w-8 opacity-20" />
-                    <p className="text-sm">No receipts found matching your criteria</p>
+                <TableCell colSpan={7} className="h-96 py-0">
+                  <div className="flex flex-col items-center justify-center text-center p-8">
+                    <PackageCheck size={48} className="text-slate-300 mb-3" />
+                    <h3 className="text-sm font-bold text-slate-900">No receipts yet</h3>
+                    <p className="text-xs text-slate-500 mb-4">Start by recording your first incoming stock shipment</p>
+                    {isManager && (
+                      <Button onClick={() => navigate('/receipts/new')} size="sm" className="h-8 text-xs font-bold gap-1.5 shadow-md shadow-indigo-500/10">
+                        <Plus className="h-3 w-3" />
+                        New Receipt
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>

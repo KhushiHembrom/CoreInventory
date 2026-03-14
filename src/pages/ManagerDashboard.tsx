@@ -125,6 +125,7 @@ export default function ManagerDashboard() {
       return data || [];
     },
     enabled: !!user,
+    staleTime: 30000,
   });
 
   const { data: products, isLoading: productsLoading } = useQuery({
@@ -139,6 +140,7 @@ export default function ManagerDashboard() {
       return data || [];
     },
     enabled: !!user,
+    staleTime: 30000,
   });
 
   const { data: receipts, isLoading: receiptsLoading } = useQuery({
@@ -146,12 +148,12 @@ export default function ManagerDashboard() {
     queryFn: async () => {
       let query = supabase.from("receipts").select("*");
       if (warehouseId !== "all") query = query.eq("warehouse_id", warehouseId);
-      if (filters.status !== "all") query = query.eq("status", filters.status);
-      const { data, error } = await query;
+      const { data, error } = await query.in('status', ['Waiting', 'Ready']);
       if (error) throw error;
       return data || [];
     },
     enabled: !!user,
+    staleTime: 30000,
   });
 
   const { data: deliveries, isLoading: deliveriesLoading } = useQuery({
@@ -159,12 +161,12 @@ export default function ManagerDashboard() {
     queryFn: async () => {
       let query = supabase.from("deliveries").select("*");
       if (warehouseId !== "all") query = query.eq("warehouse_id", warehouseId);
-      if (filters.status !== "all") query = query.eq("status", filters.status);
-      const { data, error } = await query;
+      const { data, error } = await query.in('status', ['Waiting', 'Ready']);
       if (error) throw error;
       return data || [];
     },
     enabled: !!user,
+    staleTime: 30000,
   });
 
   const { data: transfers, isLoading: transfersLoading } = useQuery({
@@ -174,12 +176,12 @@ export default function ManagerDashboard() {
       if (warehouseId !== "all") {
         query = query.or(`from_warehouse_id.eq.${warehouseId},to_warehouse_id.eq.${warehouseId}`);
       }
-      if (filters.status !== "all") query = query.eq("status", filters.status);
-      const { data, error } = await query;
+      const { data, error } = await query.in('status', ['Draft', 'Waiting']);
       if (error) throw error;
       return data || [];
     },
     enabled: !!user,
+    staleTime: 30000,
   });
 
   const { data: adjustments } = useQuery({
@@ -224,7 +226,7 @@ export default function ManagerDashboard() {
     };
 
     const channel = supabase
-      .channel('dashboard-changes')
+      .channel('dashboard-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'stock' }, refreshData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'receipts' }, refreshData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries' }, refreshData)
@@ -244,12 +246,12 @@ export default function ManagerDashboard() {
     return { ...p, current_qty: productStock };
   }) || [];
 
-  const lowStockCount = productsWithStock.filter(p => p.current_qty > 0 && p.current_qty < (p.reorder_level || 0)).length;
-  const outOfStockCount = productsWithStock.filter(p => p.current_qty === 0).length;
+  const lowStockCount = stock?.filter(s => s.quantity > 0 && s.quantity < (s.products as any)?.reorder_level).length ?? 0;
+  const outOfStockCount = stock?.filter(s => s.quantity === 0).length ?? 0;
 
-  const pendingReceiptsCount = receipts?.filter(r => ["Waiting", "Ready"].includes(r.status || "")).length || 0;
-  const pendingDeliveriesCount = deliveries?.filter(d => ["Waiting", "Ready"].includes(d.status || "")).length || 0;
-  const scheduledTransfersCount = transfers?.filter(t => ["Draft", "Waiting"].includes(t.status || "")).length || 0;
+  const pendingReceiptsCount = receipts?.length ?? 0;
+  const pendingDeliveriesCount = deliveries?.length ?? 0;
+  const scheduledTransfersCount = transfers?.length ?? 0;
 
   // Combined loading state: only wait for the most critical inventory data
   const isInitialLoading = stockLoading || productsLoading;
@@ -377,13 +379,19 @@ export default function ManagerDashboard() {
   return (
     <div className="space-y-6">
       {/* Manager Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold tracking-tight">Manager Dashboard</h1>
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-50 border border-emerald-100">
-            <div className={`h-2 w-2 rounded-full bg-emerald-500 ${liveIndicator ? 'animate-ping' : ''}`} />
-            <span className="text-[10px] font-medium text-emerald-600 uppercase tracking-wider">Live</span>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-2xl font-bold tracking-tight">Manager Dashboard</h1>
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Live</span>
+            </div>
           </div>
+          <p className="text-sm text-muted-foreground">Overview of inventory across all locations</p>
         </div>
         <div className="flex items-center gap-2">
           <Button 

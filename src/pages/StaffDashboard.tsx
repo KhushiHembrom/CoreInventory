@@ -62,6 +62,7 @@ export default function StaffDashboard() {
       return data || [];
     },
     enabled: !!user,
+    staleTime: 30000,
   });
 
   const { data: ledger, isLoading: ledgerLoading } = useQuery({
@@ -81,6 +82,7 @@ export default function StaffDashboard() {
       return data || [];
     },
     enabled: !!user,
+    staleTime: 30000,
   });
 
   const { data: receipts } = useQuery({
@@ -95,6 +97,7 @@ export default function StaffDashboard() {
       return data || [];
     },
     enabled: !!user,
+    staleTime: 30000,
   });
 
   const { data: deliveries } = useQuery({
@@ -109,7 +112,25 @@ export default function StaffDashboard() {
       return data || [];
     },
     enabled: !!user,
+    staleTime: 30000,
   });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('staff-realtime')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'stock' },
+        () => queryClient.invalidateQueries({ queryKey: ['staff-stock'] })
+      )
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'stock_ledger' },
+        () => queryClient.invalidateQueries({ queryKey: ['staff-ledger'] })
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   useEffect(() => {
     const refreshData = () => {

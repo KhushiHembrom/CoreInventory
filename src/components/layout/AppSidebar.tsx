@@ -42,11 +42,8 @@ export function AppSidebar() {
 
   const handleLogout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        toast.error('Logout failed: ' + error.message);
-        return;
-      }
+      await supabase.auth.signOut();
+      useAuthStore.getState().reset?.(); // clear store if reset exists
       
       // Clear any cached state
       queryClient.clear();
@@ -56,7 +53,7 @@ export function AppSidebar() {
       sessionStorage.clear();
       
       toast.success("Logged out from CoreInventory");
-      navigate("/auth", { replace: true });
+      window.location.href = '/auth';
     } catch (err) {
       toast.error("An unexpected error occurred during logout");
       console.error(err);
@@ -88,8 +85,8 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild tooltip={item.title}>
                     <NavLink
                       to={item.url}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all duration-200 group relative"
-                      activeClassName="bg-indigo-600/10 text-indigo-400 shadow-[inset_0_0_10px_rgba(99,102,241,0.1)] font-semibold border-l-2 border-indigo-500"
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition-all duration-200 group relative"
+                      activeClassName="bg-indigo-600 text-white shadow-md shadow-indigo-500/20 font-semibold border-l-2 border-indigo-500"
                     >
                       <item.icon className="h-4 w-4 shrink-0 transition-transform group-hover:scale-110" />
                       {!collapsed && <span className="text-sm font-medium">{item.title}</span>}

@@ -1,33 +1,3 @@
-/*
--- FEATURE 6: Run this in Supabase SQL Editor
--- Add missing columns to profiles
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone_number TEXT;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;
-
--- Update handle_new_user to support Google OAuth
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO public.profiles (id, full_name, email, role)
-  VALUES (
-    NEW.id,
-    COALESCE(
-      NEW.raw_user_meta_data->>'full_name',
-      NEW.raw_user_meta_data->>'name',
-      split_part(NEW.email, '@', 1)
-    ),
-    NEW.email,
-    NULL -- Forced NULL to trigger profile completion modal
-  )
-  ON CONFLICT (id) DO UPDATE SET
-    email = EXCLUDED.email,
-    avatar_url = NEW.raw_user_meta_data->>'avatar_url',
-    full_name = COALESCE(profiles.full_name, EXCLUDED.full_name);
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
-*/
-
 import { useState, useEffect, useRef } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,13 +23,15 @@ import {
   KeyRound,
   Fingerprint
 } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function ProfilePage() {
   const { profile, user, setProfile } = useAuthStore();
   const [fullName, setFullName] = useState(profile?.full_name || "");
   const [phoneNumber, setPhoneNumber] = useState(profile?.phone_number || "");
   const [updatingProfile, setUpdatingProfile] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
   const queryClient = useQueryClient();
 
   // Password / OTP State
@@ -68,11 +40,12 @@ export default function ProfilePage() {
   const [otpCode, setOtpCode] = useState(["", "", "", "", "", ""]);
   const [timer, setTimer] = useState(0);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [changingPassword, setChangingPassword] = useState(false);
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const otpRefs = [
     useRef<HTMLInputElement>(null),
@@ -165,8 +138,8 @@ export default function ProfilePage() {
       toast.error("Passwords do not match");
       return;
     }
-    if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
-      toast.error("Password must be at least 8 chars and contain uppercase, lowercase, and a number");
+    if (newPassword.length < 8) {
+      toast.error("Password must be at least 8 characters");
       return;
     }
 
@@ -406,7 +379,7 @@ export default function ProfilePage() {
                       <Label className="text-slate-700">New Password</Label>
                       <div className="relative">
                         <Input
-                          type={showNewPassword ? "text" : "password"}
+                          type={showNew ? "text" : "password"}
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
                           className="h-11 pr-10 border-slate-200 focus:ring-indigo-500"
@@ -414,10 +387,10 @@ export default function ProfilePage() {
                         />
                         <button
                           type="button"
-                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          onClick={() => setShowNew(!showNew)}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                         >
-                          {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                          {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
                         </button>
                       </div>
                     </div>
@@ -426,7 +399,7 @@ export default function ProfilePage() {
                       <Label className="text-slate-700">Confirm New Password</Label>
                       <div className="relative">
                         <Input
-                          type={showConfirmPassword ? "text" : "password"}
+                          type={showConfirm ? "text" : "password"}
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
                           className="h-11 pr-10 border-slate-200 focus:ring-indigo-500"
@@ -434,10 +407,10 @@ export default function ProfilePage() {
                         />
                         <button
                           type="button"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          onClick={() => setShowConfirm(!showConfirm)}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                         >
-                          {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                          {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
                         </button>
                       </div>
                     </div>

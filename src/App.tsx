@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
+import { ShieldCheck } from "lucide-react";
 
 import { AppLayout } from "@/components/layout/AppLayout";
 import Auth from "@/pages/Auth";
@@ -65,57 +66,24 @@ function RoleGuard({ children, requiredRole }: { children: ReactNode, requiredRo
 }
 
 function AppContent() {
-  const { setUser, setProfile, setLoading } = useAuthStore();
+  const { loading, initialize } = useAuthStore();
 
   useEffect(() => {
-    let mounted = true;
+    initialize();
+  }, [initialize]);
 
-    const safetyTimeout = setTimeout(() => {
-      if (mounted) setLoading(false);
-    }, 5000);
-
-    const syncSession = async (session: any) => {
-      if (!mounted) return;
-      const user = session?.user ?? null;
-      setUser(user);
-      
-      if (user) {
-        try {
-          const { data } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", user.id)
-            .single();
-          if (mounted) setProfile(data || null);
-        } catch (e) {
-          console.error("Profile sync error:", e);
-        }
-      } else {
-        setProfile(null);
-      }
-      
-      if (mounted) {
-        setLoading(false);
-        clearTimeout(safetyTimeout);
-      }
-    };
-
-    // Initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      syncSession(session);
-    });
-
-    // Auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      syncSession(session);
-    });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-      clearTimeout(safetyTimeout);
-    };
-  }, [setUser, setProfile, setLoading]);
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 rounded-xl bg-indigo-600 flex items-center justify-center animate-pulse shadow-lg shadow-indigo-500/20">
+            <ShieldCheck className="h-8 w-8 text-white" />
+          </div>
+          <p className="text-sm font-medium text-slate-500 animate-pulse">Initializing system...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Routes>

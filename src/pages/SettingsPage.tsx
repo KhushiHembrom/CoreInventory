@@ -42,6 +42,24 @@ export default function SettingsPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const updateWarehouse = useMutation({
+    mutationFn: async ({ id, name, location }: { id: string, name: string, location: string }) => {
+      const { error } = await supabase.from("warehouses").update({ name, location }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Warehouse updated"); qc.invalidateQueries({ queryKey: ["warehouses"] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const updateCategory = useMutation({
+    mutationFn: async ({ id, name, description }: { id: string, name: string, description: string }) => {
+      const { error } = await supabase.from("categories").update({ name, description }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Category updated"); qc.invalidateQueries({ queryKey: ["categories"] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   return (
     <div>
       <h1 className="text-2xl font-semibold mb-6">Settings</h1>
